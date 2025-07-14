@@ -42,8 +42,17 @@ const Popup: React.FC = () => {
   };
 
   const sendMessage = (message: Message): Promise<MessageResponse> => {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(message, resolve);
+    console.log('[POPUP] Sending message:', message);
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('[POPUP] Runtime message error:', chrome.runtime.lastError);
+          reject(chrome.runtime.lastError);
+          return;
+        }
+        console.log('[POPUP] Received response:', response);
+        resolve(response);
+      });
     });
   };
 

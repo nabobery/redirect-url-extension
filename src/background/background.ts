@@ -15,18 +15,25 @@ class BackgroundService {
       { url: [{ schemes: ["http", "https"] }] }
     );
 
-    // Listen for messages from popup
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    // Listen for messages from popup or content scripts with extended logging
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log("[BG] Received message:", message, "from", sender);
+      // Delegate to class method (async) and keep the port open
+      this.handleMessage(message, sender, sendResponse);
+      return true; // Indicates we will respond asynchronously
+    });
 
     // Clean up redirected tabs when they're closed
     chrome.tabs.onRemoved.addListener((tabId) => {
       this.redirectedTabs.delete(tabId);
+      console.log("[BG] Tab removed, clearing from redirected set:", tabId);
     });
   }
 
   private async handleNavigation(
     details: chrome.webNavigation.WebNavigationParentedCallbackDetails
   ): Promise<void> {
+    console.log("[BG] onBeforeNavigate:", details);
     // Only handle main frame navigation
     if (details.frameId !== 0) return;
 
@@ -39,12 +46,17 @@ class BackgroundService {
     try {
       const settings = await StorageManager.getSettings();
 
-      if (!settings.isEnabled) return;
+      if (!settings.isEnabled) {
+        console.log("[BG] Extension disabled, skipping navigation handling");
+        return;
+      }
 
       const rule = this.findMatchingRule(details.url, settings.rules);
+      console.log("[BG] Matching rule:", rule);
       if (!rule) return;
 
       const redirectUrl = this.buildRedirectUrl(details.url, rule);
+      console.log("[BG] Built redirect URL:", redirectUrl);
 
       if (redirectUrl && redirectUrl !== details.url) {
         this.redirectedTabs.add(details.tabId);
@@ -88,6 +100,7 @@ class BackgroundService {
         if (rule.isRegex) {
           const regex = new RegExp(rule.pattern, "i");
           if (regex.test(url)) {
+            console.log("[BG] Rule matched (regex):", rule.name);
             return rule;
           }
         } else {
@@ -99,6 +112,7 @@ class BackgroundService {
 
           const regex = new RegExp(pattern, "i");
           if (regex.test(url)) {
+            console.log("[BG] Rule matched (simple):", rule.name);
             return rule;
           }
         }
@@ -107,6 +121,7 @@ class BackgroundService {
       }
     }
 
+    console.log("[BG] No rule matched for URL:", url);
     return null;
   }
 
