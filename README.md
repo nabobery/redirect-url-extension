@@ -15,7 +15,7 @@ A Chrome extension that automatically redirects URLs based on configurable rules
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/url-redirect-extension.git
+   git clone https://github.com/nabobery/medium-free-extension.git
    ```
 2. Install dependencies:
    ```bash
