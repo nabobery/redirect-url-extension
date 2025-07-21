@@ -37,10 +37,34 @@ A Chrome extension that automatically redirects URLs based on configurable rules
 ## Usage
 
 1. Click the extension icon to open the popup.
-2. In the "Rules" tab, add new rules by specifying a name, pattern (e.g., `*.example.com`), prefix (e.g., `proxy.`), and whether it's a regex pattern.
+2. In the "Rules" tab, add new rules by specifying a name, pattern (e.g., `*.example.com`), replacement (e.g., `proxy.` or a regex template like `$1ss$2`), and whether it's a regex pattern.
 3. Enable/disable the extension or individual rules in the "Settings" tab.
 4. View redirect history in the "Logs" tab.
 5. When visiting a matching URL, the extension will automatically redirect and (optionally) notify you.
+
+## Example Rules
+
+Here are some practical examples of redirect rules you can set up in the extension. These demonstrate both simple and regex-based transformations.
+
+### Example 1: Insert 'ss' into YouTube URLs (for Downloaders)
+
+- **Rule Name**: YouTube Saver
+- **URL Pattern**: `^(https?://(?:www\.)?)youtube\.com(.*)$` (matches YouTube URLs, making 'www.' optional)
+- **Replacement**: `$1ssyoutube.com$2` (inserts 'ss' into the domain while preserving the protocol and path)
+- **Use Regular Expression**: Checked
+
+This transforms `https://www.youtube.com/watch?v=JUaOFaI2UnY` to `https://www.ssyoutube.com/watch?v=JUaOFaI2UnY` (a common downloader site).
+
+### Example 2: Prepend a Service to Medium URLs (e.g., for Bypass)
+
+- **Rule Name**: Medium Bypass
+- **URL Pattern**: `^(https?://(?:www\.)?medium\.com/.*)$` (matches full Medium article URLs)
+- **Replacement**: `https://freedium.cfd/$1` (prepends the service URL to the original)
+- **Use Regular Expression**: Checked
+
+This transforms `https://medium.com/some-article` to `https://freedium.cfd/https://medium.com/some-article`.
+
+Tips: Use tools like regex101.com to test patterns. For non-regex rules, the replacement acts as a simple prefix (e.g., adding a domain or path).
 
 ## Configuration
 
