@@ -2,7 +2,7 @@ export interface RedirectRule {
     id: string;
     name: string;
     pattern: string;
-    prefix: string;
+    replacement: string;
     isEnabled: boolean;
     isRegex: boolean;
     createdAt: number;

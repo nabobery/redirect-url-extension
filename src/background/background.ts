@@ -126,26 +126,33 @@ class BackgroundService {
   }
 
   private buildRedirectUrl(originalUrl: string, rule: RedirectRule): string {
+    console.log("[BG] Building redirect for URL:", originalUrl);
+    console.log("[BG] Rule details:", rule);
+    console.log("[BG] isRegex in build:", rule.isRegex);
     try {
-      const url = new URL(originalUrl);
-
-      // Add prefix to the URL
-      if (
-        rule.prefix.startsWith("http://") ||
-        rule.prefix.startsWith("https://")
-      ) {
-        // If prefix is a full URL, append the original URL as a parameter
-        const prefixUrl = new URL(rule.prefix);
-        prefixUrl.searchParams.set("url", originalUrl);
-        return prefixUrl.toString();
+      if (rule.isRegex) {
+        const regex = new RegExp(rule.pattern, "i");
+        return originalUrl.replace(regex, rule.replacement);
       } else {
-        // If prefix is a domain or path, prepend it
-        if (rule.prefix.includes("/")) {
-          // Prefix includes path
-          return rule.prefix + originalUrl;
+        const url = new URL(originalUrl);
+        const replacement = rule.replacement;
+        if (replacement == null) {
+          console.error("[BG] Replacement is undefined for non-regex rule");
+          return originalUrl;
+        }
+        if (
+          replacement.startsWith("http://") ||
+          replacement.startsWith("https://")
+        ) {
+          const prefixUrl = new URL(replacement);
+          prefixUrl.searchParams.set("url", originalUrl);
+          return prefixUrl.toString();
         } else {
-          // Prefix is just a domain
-          return `${url.protocol}//${rule.prefix}${url.pathname}${url.search}${url.hash}`;
+          if (replacement.includes("/")) {
+            return replacement + originalUrl;
+          } else {
+            return `${url.protocol}//${replacement}${url.pathname}${url.search}${url.hash}`;
+          }
         }
       }
     } catch (error) {
@@ -241,9 +248,10 @@ class BackgroundService {
     rule: RedirectRule
   ): { matches: boolean; redirectUrl?: string } {
     try {
-      const matches = this.findMatchingRule(url, [rule]) !== null;
+      const matchedRule = this.findMatchingRule(url, [rule]);
+      const matches = matchedRule !== null;
       const redirectUrl = matches
-        ? this.buildRedirectUrl(url, rule)
+        ? this.buildRedirectUrl(url, matchedRule)
         : undefined;
       return { matches, redirectUrl };
     } catch (error) {

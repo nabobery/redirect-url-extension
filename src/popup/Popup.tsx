@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { ExtensionSettings, RedirectRule, RedirectLog, Message, MessageResponse } from '../types';
-import { StorageManager } from '../utils/storage';
-import './popup.css';
+import React, { useState, useEffect } from "react";
+import {
+  ExtensionSettings,
+  RedirectRule,
+  RedirectLog,
+  Message,
+  MessageResponse,
+} from "../types";
+import { StorageManager } from "../utils/storage";
+import "./popup.css";
 
 const Popup: React.FC = () => {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
   const [logs, setLogs] = useState<RedirectLog[]>([]);
-  const [activeTab, setActiveTab] = useState<'rules' | 'logs' | 'settings'>('rules');
+  const [activeTab, setActiveTab] = useState<"rules" | "logs" | "settings">(
+    "rules"
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,10 +22,10 @@ const Popup: React.FC = () => {
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [editingRule, setEditingRule] = useState<RedirectRule | null>(null);
   const [ruleForm, setRuleForm] = useState({
-    name: '',
-    pattern: '',
-    prefix: '',
-    isRegex: false
+    name: "",
+    pattern: "",
+    replacement: "",
+    isRegex: false,
   });
 
   useEffect(() => {
@@ -27,30 +35,33 @@ const Popup: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const response = await sendMessage({ type: 'GET_SETTINGS' });
+      const response = await sendMessage({ type: "GET_SETTINGS" });
       if (response.success) {
         setSettings(response.data.settings);
         setLogs(response.data.logs);
       } else {
-        setError(response.error || 'Failed to load data');
+        setError(response.error || "Failed to load data");
       }
     } catch (err) {
-      setError('Failed to load extension data');
+      setError("Failed to load extension data");
     } finally {
       setIsLoading(false);
     }
   };
 
   const sendMessage = (message: Message): Promise<MessageResponse> => {
-    console.log('[POPUP] Sending message:', message);
+    console.log("[POPUP] Sending message:", message);
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
-          console.error('[POPUP] Runtime message error:', chrome.runtime.lastError);
+          console.error(
+            "[POPUP] Runtime message error:",
+            chrome.runtime.lastError
+          );
           reject(chrome.runtime.lastError);
           return;
         }
-        console.log('[POPUP] Received response:', response);
+        console.log("[POPUP] Received response:", response);
         resolve(response);
       });
     });
@@ -61,16 +72,16 @@ const Popup: React.FC = () => {
 
     try {
       const updatedSettings = { ...settings, isEnabled: !settings.isEnabled };
-      await sendMessage({ type: 'UPDATE_SETTINGS', data: updatedSettings });
+      await sendMessage({ type: "UPDATE_SETTINGS", data: updatedSettings });
       setSettings(updatedSettings);
     } catch (err) {
-      setError('Failed to toggle extension');
+      setError("Failed to toggle extension");
     }
   };
 
   const handleAddRule = async () => {
-    if (!ruleForm.name || !ruleForm.pattern || !ruleForm.prefix) {
-      setError('Please fill in all fields');
+    if (!ruleForm.name || !ruleForm.pattern || !ruleForm.replacement) {
+      setError("Please fill in all fields");
       return;
     }
 
@@ -79,25 +90,30 @@ const Popup: React.FC = () => {
         id: StorageManager.generateId(),
         name: ruleForm.name,
         pattern: ruleForm.pattern,
-        prefix: ruleForm.prefix,
+        replacement: ruleForm.replacement,
         isEnabled: true,
         isRegex: ruleForm.isRegex,
         createdAt: Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       };
 
-      await sendMessage({ type: 'ADD_RULE', data: newRule });
+      await sendMessage({ type: "ADD_RULE", data: newRule });
       await loadData();
       setIsAddingRule(false);
       resetRuleForm();
     } catch (err) {
-      setError('Failed to add rule');
+      setError("Failed to add rule");
     }
   };
 
   const handleUpdateRule = async () => {
-    if (!editingRule || !ruleForm.name || !ruleForm.pattern || !ruleForm.prefix) {
-      setError('Please fill in all fields');
+    if (
+      !editingRule ||
+      !ruleForm.name ||
+      !ruleForm.pattern ||
+      !ruleForm.replacement
+    ) {
+      setError("Please fill in all fields");
       return;
     }
 
@@ -105,36 +121,42 @@ const Popup: React.FC = () => {
       const updates = {
         name: ruleForm.name,
         pattern: ruleForm.pattern,
-        prefix: ruleForm.prefix,
-        isRegex: ruleForm.isRegex
+        replacement: ruleForm.replacement,
+        isRegex: ruleForm.isRegex,
       };
 
-      await sendMessage({ type: 'UPDATE_RULE', data: { id: editingRule.id, updates } });
+      await sendMessage({
+        type: "UPDATE_RULE",
+        data: { id: editingRule.id, updates },
+      });
       await loadData();
       setEditingRule(null);
       resetRuleForm();
     } catch (err) {
-      setError('Failed to update rule');
+      setError("Failed to update rule");
     }
   };
 
   const handleDeleteRule = async (ruleId: string) => {
-    if (!confirm('Are you sure you want to delete this rule?')) return;
+    if (!confirm("Are you sure you want to delete this rule?")) return;
 
     try {
-      await sendMessage({ type: 'DELETE_RULE', data: { id: ruleId } });
+      await sendMessage({ type: "DELETE_RULE", data: { id: ruleId } });
       await loadData();
     } catch (err) {
-      setError('Failed to delete rule');
+      setError("Failed to delete rule");
     }
   };
 
   const handleToggleRule = async (ruleId: string, isEnabled: boolean) => {
     try {
-      await sendMessage({ type: 'UPDATE_RULE', data: { id: ruleId, updates: { isEnabled } } });
+      await sendMessage({
+        type: "UPDATE_RULE",
+        data: { id: ruleId, updates: { isEnabled } },
+      });
       await loadData();
     } catch (err) {
-      setError('Failed to toggle rule');
+      setError("Failed to toggle rule");
     }
   };
 
@@ -143,52 +165,54 @@ const Popup: React.FC = () => {
     setRuleForm({
       name: rule.name,
       pattern: rule.pattern,
-      prefix: rule.prefix,
-      isRegex: rule.isRegex
+      replacement: rule.replacement,
+      isRegex: rule.isRegex,
     });
     setIsAddingRule(true);
   };
 
   const handleTestRule = async (rule: RedirectRule) => {
-    const testUrl = prompt('Enter a URL to test:');
+    const testUrl = prompt("Enter a URL to test:");
     if (!testUrl) return;
 
     try {
-      const response = await sendMessage({ 
-        type: 'TEST_RULE', 
-        data: { url: testUrl, rule } 
+      const response = await sendMessage({
+        type: "TEST_RULE",
+        data: { url: testUrl, rule },
       });
-      
+
       if (response.success) {
         const result = response.data;
         if (result.matches) {
-          alert(`✅ Rule matches!\nOriginal: ${testUrl}\nRedirect: ${result.redirectUrl}`);
+          alert(
+            `✅ Rule matches!\nOriginal: ${testUrl}\nRedirect: ${result.redirectUrl}`
+          );
         } else {
           alert(`❌ Rule doesn't match the URL: ${testUrl}`);
         }
       }
     } catch (err) {
-      setError('Failed to test rule');
+      setError("Failed to test rule");
     }
   };
 
   const resetRuleForm = () => {
     setRuleForm({
-      name: '',
-      pattern: '',
-      prefix: '',
-      isRegex: false
+      name: "",
+      pattern: "",
+      replacement: "",
+      isRegex: false,
     });
   };
 
   const handleClearLogs = async () => {
-    if (!confirm('Are you sure you want to clear all logs?')) return;
+    if (!confirm("Are you sure you want to clear all logs?")) return;
 
     try {
-      await sendMessage({ type: 'CLEAR_LOGS' });
+      await sendMessage({ type: "CLEAR_LOGS" });
       await loadData();
     } catch (err) {
-      setError('Failed to clear logs');
+      setError("Failed to clear logs");
     }
   };
 
@@ -197,10 +221,10 @@ const Popup: React.FC = () => {
 
     try {
       const updatedSettings = { ...settings, ...updates };
-      await sendMessage({ type: 'UPDATE_SETTINGS', data: updatedSettings });
+      await sendMessage({ type: "UPDATE_SETTINGS", data: updatedSettings });
       setSettings(updatedSettings);
     } catch (err) {
-      setError('Failed to update settings');
+      setError("Failed to update settings");
     }
   };
 
@@ -210,7 +234,7 @@ const Popup: React.FC = () => {
 
   const shortenUrl = (url: string, maxLength: number = 40) => {
     if (url.length <= maxLength) return url;
-    return url.substring(0, maxLength - 3) + '...';
+    return url.substring(0, maxLength - 3) + "...";
   };
 
   if (isLoading) {
@@ -252,27 +276,27 @@ const Popup: React.FC = () => {
 
       <div className="tab-navigation">
         <button
-          className={activeTab === 'rules' ? 'active' : ''}
-          onClick={() => setActiveTab('rules')}
+          className={activeTab === "rules" ? "active" : ""}
+          onClick={() => setActiveTab("rules")}
         >
           Rules ({settings.rules.length})
         </button>
         <button
-          className={activeTab === 'logs' ? 'active' : ''}
-          onClick={() => setActiveTab('logs')}
+          className={activeTab === "logs" ? "active" : ""}
+          onClick={() => setActiveTab("logs")}
         >
           Logs ({logs.length})
         </button>
         <button
-          className={activeTab === 'settings' ? 'active' : ''}
-          onClick={() => setActiveTab('settings')}
+          className={activeTab === "settings" ? "active" : ""}
+          onClick={() => setActiveTab("settings")}
         >
           Settings
         </button>
       </div>
 
       <div className="tab-content">
-        {activeTab === 'rules' && (
+        {activeTab === "rules" && (
           <div className="rules-tab">
             <div className="rules-header">
               <h2>Redirect Rules</h2>
@@ -286,13 +310,15 @@ const Popup: React.FC = () => {
 
             {isAddingRule && (
               <div className="rule-form">
-                <h3>{editingRule ? 'Edit Rule' : 'Add New Rule'}</h3>
+                <h3>{editingRule ? "Edit Rule" : "Add New Rule"}</h3>
                 <div className="form-group">
                   <label>Rule Name:</label>
                   <input
                     type="text"
                     value={ruleForm.name}
-                    onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, name: e.target.value })
+                    }
                     placeholder="e.g., Redirect Google"
                   />
                 </div>
@@ -301,17 +327,21 @@ const Popup: React.FC = () => {
                   <input
                     type="text"
                     value={ruleForm.pattern}
-                    onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, pattern: e.target.value })
+                    }
                     placeholder="e.g., *://google.com/* or https://example.com/*"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Redirect Prefix:</label>
+                  <label>Replacement:</label>
                   <input
                     type="text"
-                    value={ruleForm.prefix}
-                    onChange={(e) => setRuleForm({ ...ruleForm, prefix: e.target.value })}
-                    placeholder="e.g., https://proxy.example.com/?url="
+                    value={ruleForm.replacement}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, replacement: e.target.value })
+                    }
+                    placeholder="e.g., $1ssyoutube.com$2 or https://proxy.example.com/$&"
                   />
                 </div>
                 <div className="form-group checkbox-group">
@@ -319,7 +349,9 @@ const Popup: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={ruleForm.isRegex}
-                      onChange={(e) => setRuleForm({ ...ruleForm, isRegex: e.target.checked })}
+                      onChange={(e) =>
+                        setRuleForm({ ...ruleForm, isRegex: e.target.checked })
+                      }
                     />
                     Use Regular Expression
                   </label>
@@ -329,7 +361,7 @@ const Popup: React.FC = () => {
                     className="save-btn"
                     onClick={editingRule ? handleUpdateRule : handleAddRule}
                   >
-                    {editingRule ? 'Update Rule' : 'Add Rule'}
+                    {editingRule ? "Update Rule" : "Add Rule"}
                   </button>
                   <button
                     className="cancel-btn"
@@ -353,14 +385,19 @@ const Popup: React.FC = () => {
                 </div>
               ) : (
                 settings.rules.map((rule) => (
-                  <div key={rule.id} className={`rule-item ${!rule.isEnabled ? 'disabled' : ''}`}>
+                  <div
+                    key={rule.id}
+                    className={`rule-item ${!rule.isEnabled ? "disabled" : ""}`}
+                  >
                     <div className="rule-header">
                       <span className="rule-name">{rule.name}</span>
                       <label className="toggle-switch small">
                         <input
                           type="checkbox"
                           checked={rule.isEnabled}
-                          onChange={(e) => handleToggleRule(rule.id, e.target.checked)}
+                          onChange={(e) =>
+                            handleToggleRule(rule.id, e.target.checked)
+                          }
                         />
                         <span className="slider"></span>
                       </label>
@@ -368,10 +405,12 @@ const Popup: React.FC = () => {
                     <div className="rule-details">
                       <div className="rule-detail">
                         <strong>Pattern:</strong> {rule.pattern}
-                        {rule.isRegex && <span className="regex-badge">REGEX</span>}
+                        {rule.isRegex && (
+                          <span className="regex-badge">REGEX</span>
+                        )}
                       </div>
                       <div className="rule-detail">
-                        <strong>Prefix:</strong> {rule.prefix}
+                        <strong>Replacement:</strong> {rule.replacement}
                       </div>
                       <div className="rule-detail">
                         <strong>Created:</strong> {formatDate(rule.createdAt)}
@@ -404,7 +443,7 @@ const Popup: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'logs' && (
+        {activeTab === "logs" && (
           <div className="logs-tab">
             <div className="logs-header">
               <h2>Redirect Logs</h2>
@@ -426,7 +465,9 @@ const Popup: React.FC = () => {
                   <div key={log.id} className="log-item">
                     <div className="log-header">
                       <span className="log-rule">{log.ruleName}</span>
-                      <span className="log-time">{formatDate(log.timestamp)}</span>
+                      <span className="log-time">
+                        {formatDate(log.timestamp)}
+                      </span>
                     </div>
                     <div className="log-urls">
                       <div className="log-url">
@@ -443,7 +484,7 @@ const Popup: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === "settings" && (
           <div className="settings-tab">
             <h2>Settings</h2>
             <div className="settings-list">
@@ -452,7 +493,11 @@ const Popup: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.showNotifications}
-                    onChange={(e) => handleUpdateSettings({ showNotifications: e.target.checked })}
+                    onChange={(e) =>
+                      handleUpdateSettings({
+                        showNotifications: e.target.checked,
+                      })
+                    }
                   />
                   Show redirect notifications
                 </label>
@@ -462,17 +507,22 @@ const Popup: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.logRedirects}
-                    onChange={(e) => handleUpdateSettings({ logRedirects: e.target.checked })}
+                    onChange={(e) =>
+                      handleUpdateSettings({ logRedirects: e.target.checked })
+                    }
                   />
                   Log redirect activity
                 </label>
               </div>
             </div>
-            
+
             <div className="settings-section">
               <h3>About</h3>
               <p>URL Redirect Extension v1.0.0</p>
-              <p>Redirects URLs based on configurable rules with prefix addition.</p>
+              <p>
+                Redirects URLs based on configurable rules with pattern matching
+                and replacement.
+              </p>
             </div>
           </div>
         )}
